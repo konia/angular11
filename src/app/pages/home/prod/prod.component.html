@@ -1,0 +1,9 @@
+<p *ngIf="selectedLink == 'hot'; else other">prod works!</p>
+<ng-template #other>{{ selectedLink }}</ng-template>
+<ul>
+  <li *ngFor="let item of menu">
+    <!-- <a [routerLink]="[item.link]" routerLinkActive="router-link-active"> -->
+    {{ item.title }}
+    <!-- </a> -->
+  </li>
+</ul>

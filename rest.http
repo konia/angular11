@@ -1,0 +1,14 @@
+GET {{host}}/posts HTTP/1.1
+
+###
+GET {{host}}/users HTTP/1.1
+
+###
+POST {{host}}/posts HTTP/1.1
+content-type: 'application/json; charset=UTF-8',
+
+{
+  "title": "foo",
+  "body": "bar",
+  "userId": 1,
+}

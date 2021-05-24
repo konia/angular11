@@ -1,0 +1,42 @@
+<div appGrid display="flex">
+  <div id="title">Game Title</div>
+  <div id="score">Score</div>
+  <div id="stats">Stats</div>
+  <div id="board">Board</div>
+  <div id="controls">Controls</div>
+</div>
+<app-banner>
+  <div>s</div>
+</app-banner>
+<ul>
+  <li *ngFor="let item of menu" (click)="handleLink(item)">
+    <!-- <a [routerLink]="[item.link]" routerLinkActive="router-link-active"> -->
+    {{ item.title }}
+    <!-- </a> -->
+  </li>
+  2021/05/04 02:00:00
+  <br />
+  {{
+    date | ago
+  }}
+</ul>
+
+<ul>
+  <li *ngFor="let item of user">
+    name: {{ item.name }}
+    <br />
+    email: {{ item.email }}
+    <br />
+    username: {{ item.address.street }} {{ item.address.suite }} {{ item.address.city }}
+    <br />
+    phone: {{ item.phone }}
+    <br />
+    company: {{ item.company.name }}
+    <br />
+  </li>
+</ul>
+<button (click)="getUser()">Button</button>
+
+<router-outlet></router-outlet>
+
+<image-editor [initialImage]="img"></image-editor>

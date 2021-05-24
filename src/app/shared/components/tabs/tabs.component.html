@@ -1,0 +1,5 @@
+<ul>
+  <li *ngFor="let item of tabs; let i = index">
+    <a [href]="item.link" [class.active]="selected === i" (click)="selected = i">{{ item.title }}</a>
+  </li>
+</ul>
