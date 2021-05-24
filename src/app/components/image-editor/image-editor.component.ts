@@ -15,6 +15,8 @@ export class ImageEditorComponent implements OnInit, OnChanges, AfterViewInit, O
   initializeImgUrl!: string;
   imageChosen = false;
 
+  downloadImage = '';
+
   @Input() initialImage!: string;
 
   @Input() options: {
@@ -141,7 +143,7 @@ export class ImageEditorComponent implements OnInit, OnChanges, AfterViewInit, O
     };
     if (this.imageChosen) {
       console.log(this.imageEditor.toDataURL(options));
-      return this.imageEditor.toDataURL(options);
+      this.downloadImage = this.imageEditor.toDataURL(options);
     }
 
     return '';
