@@ -1,5 +1,8 @@
-<div #imageContainer class="tui-image-editor-flex-grow-1 tui-image-editor-d-flex tui-image-editor-align-items-center tui-image-editor-justify-content-center"></div>
-
-<!-- <img src="../../../assets/img.jpeg" alt="" /> -->
-<button (click)="getImage()">download</button>
-<img [src]="downloadImage" alt="" />
+<div id="imgViewDiv" class="img-view-dialog" #imgViewDiv>
+  <div id="imgViewContent" class="img-view-content" draggable="true" (mousedown)="mousedown($event)" #imgViewContent [ngStyle]="transform: rotate(rotateValue)">
+    <img id="dialogImg" class="dialog-img" [src]="initialImage" #dialogImg />
+  </div>
+</div>
+<button>放大</button>
+<button (click)="onZoomIn()">缩小</button>
+<button (click)="onRotate()">旋转</button>

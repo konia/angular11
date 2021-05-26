@@ -38,5 +38,6 @@
 <button (click)="getUser()">Button</button>
 
 <router-outlet></router-outlet>
-
-<image-editor [initialImage]="img"></image-editor>
+<div [ngStyle]="{ width: '700px', height: '500px' }">
+  <image-editor [initialImage]="loadimg"></image-editor>
+</div>

@@ -1,8 +1,5 @@
-import { Component, ElementRef, OnInit, SimpleChanges, ViewChild, OnChanges, AfterViewInit, OnDestroy, Input } from '@angular/core';
-const ImageEditor = require('tui-image-editor');
-
-import { ImageSize } from './interface/image-size';
-import { isFileApiSupported } from './utils';
+import { Component, ElementRef, OnInit, SimpleChanges, ViewChild, OnChanges, AfterViewInit, OnDestroy, Input, Renderer2, HostListener } from '@angular/core';
+import { Subscription, fromEvent } from 'rxjs';
 
 @Component({
   // tslint:disable-next-line: component-selector
@@ -11,141 +8,208 @@ import { isFileApiSupported } from './utils';
   styleUrls: ['./image-editor.component.scss']
 })
 export class ImageEditorComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
-  imageEditor: any;
-  initializeImgUrl!: string;
-  imageChosen = false;
+  constructor(private renderer: Renderer2) { }
 
-  downloadImage = '';
+  winWidth = 0;
+  winHeight = 0;
+  startX = 0;
+  startY = 0;
+  x = 0;
+  y = 0;
+  index = 1;
 
-  @Input() initialImage!: string;
+  imgWidth = 0;
+  imgHeight = 0;
+  imgMarginLeft = 0;
+  imgMarginTop = 0;
 
-  @Input() options: {
-    usageStatistics: boolean;
-    selectionStyle?: {
-      cornerStyle: string;
-      cornerSize: number;
-      cornerColor: string;
-      cornerStrokeColor: string;
-      transparentCorners: boolean;
-      lineWidth: number;
-      borderColor: string;
-      rotatingPointOffset: number;
-    };
-    applyCropSelectionStyle: boolean;
-    applyGroupSelectionStyle: boolean;
-  } = {
-      usageStatistics: false,
-      selectionStyle: {
-        cornerStyle: 'circle',
-        cornerSize: 32,
-        cornerColor: '#fff',
-        cornerStrokeColor: '#fff',
-        transparentCorners: false,
-        lineWidth: 4,
-        borderColor: '#fff',
-        rotatingPointOffset: 500,
-      },
-      applyCropSelectionStyle: true,
-      applyGroupSelectionStyle: true,
-    };
+  rotateNum = 0;
+  rotateValue = '';
+  scaleNum = 1;
+  scaleValue = '';
+  @Input() initialImage = '';
 
-  @ViewChild('imageContainer') imageContainer!: ElementRef;
-  constructor() { }
+  mousemoveSub!: Subscription;
+  mouseupSub!: Subscription;
+
+  @ViewChild('imgViewContent') imgViewContent!: ElementRef;
+  @ViewChild('imgViewDiv') imgViewDiv!: ElementRef;
+  @ViewChild('dialogImg') dialogImg!: ElementRef;
 
   ngOnInit(): void {
+
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (
-      (changes.options && changes.options.firstChange === false) ||
-      (changes.initialImage && changes.initialImage.firstChange === false)
-    ) {
-      // this.destroyImageEditor();
-      this.initializeImageEditor();
-    }
+
   }
 
   ngOnDestroy(): void {
     throw new Error('Method not implemented.');
   }
   ngAfterViewInit(): void {
-    const that = this;
-
-    setTimeout(() => {
-      //   this.imageEditor.on(eventNames.SELECTION_CLEARED, function () {
-      //     that.activeObjectId = null;
-      //     if (that.submenu === 'text') {
-      //       that.imageEditor.changeCursor('text');
-      //     } else if (that.submenu !== 'draw' && that.submenu !== 'crop') {
-      //       that.imageEditor.stopDrawingMode();
-      //     }
-      //   });
-      that.initializeImageEditor();
-    });
+    this.init();
   }
 
-  initializeImageEditor(): void {
-    // this.historyService.clear();
+  init(): void {
 
-    this.imageEditor = new ImageEditor(
-      this.imageContainer.nativeElement,
-      this.options
-    );
-    console.log(this.imageEditor);
-    if (this.initialImage != null) {
-      this.loadImage(this.initialImage);
-    }
-  }
+    const image = new Image();
+    image.src = this.initialImage;
+    let { width, height } = image;
+    const { clientWidth, clientHeight } = this.imgViewDiv.nativeElement;
 
-  loadImage(file: string): void {
-    console.log(file);
-    if (file != null) {
-      if (this.initializeImgUrl != null && file !== this.initializeImgUrl) {
-        URL.revokeObjectURL(this.initializeImgUrl);
+    console.log(clientWidth, clientHeight);
+
+    if (width < (clientWidth * 0.8) && height < (clientHeight * 0.8)) {
+      width = width;
+      height = height;
+    } else {
+      const scaleX = width / (clientWidth * 0.8);
+      const scaleY = height / (clientHeight * 0.8);
+      if (scaleX > scaleY) {
+        width = Math.floor(clientWidth * 0.8);
+        height = Math.floor(height / scaleX);
+      } else {
+        width = Math.floor(width / scaleY);
+        height = Math.floor(clientHeight * 0.8);
       }
-
-      this.initializeImgUrl = file;
-      this.imageEditor
-        .loadImageFromURL(this.initializeImgUrl, 'RandomFileName')
-        .then((sizeValue: ImageSize) => {
-          this.imageChosen = true;
-
-          // this.exitCropOnAction();
-          this.imageEditor.clearUndoStack();
-          this.imageEditor.clearRedoStack();
-          // this.historyService.clear();
-          // this.imageEditor._invoker.fire(
-          //   eventNames.EXECUTE_COMMAND,
-          //   historyNames.LOAD_IMAGE
-          // );
-        }).catch((message: any) => Promise.reject(message));
-    }
-  }
-  aaa(): void {
-    console.log(1111);
-  }
-  getImage(): string {
-
-    const options: {
-      format: 'jpeg' | 'png';
-      quality: number;
-      multiplier: number;
-      left?: number;
-      top?: number;
-      width?: number;
-      height?: number;
-    } = {
-      format: 'png',
-      quality: 1,
-      multiplier: 1,
-      width: 100,
-      height: 100
-    };
-    if (this.imageChosen) {
-      console.log(this.imageEditor.toDataURL(options));
-      this.downloadImage = this.imageEditor.toDataURL(options);
     }
 
-    return '';
+    const left = (clientWidth - width) / 2;
+    const top = (clientHeight - height) / 2;
+
+    this.imgMarginLeft = left;
+    this.imgMarginTop = top;
+    this.imgWidth = width;
+    this.imgHeight = height;
+
+    this.imgViewContent.nativeElement.style.cssText = 'margin-top:' + top + 'px; margin-left:' + left + 'px';
+    this.dialogImg.nativeElement.style.cssText = 'width:' + width + 'px; height:' + height + 'px;';
+  }
+
+  onRotate(): void {
+    this.rotateNum++;
+    this.rotateValue = this.rotateNum * 90 + 'deg';
+  }
+
+  onZoomIn(): void {
+    this.scaleNum++;
+    // this.scaleValue = this.scaleNum * 0.2 + 1;
+  }
+
+  mousedown(event: any): void {
+    event.preventDefault();
+    const imgWidth = this.imgWidth;
+    const imgHeight = this.imgHeight;
+    const rotateNum = this.rotateNum * 90;
+    // 根据旋转的角度不同，坐标也不一样
+    if (rotateNum % 90 === 0 && rotateNum % 180 !== 0 && rotateNum % 270 !== 0 && rotateNum % 360 !== 0) {
+      this.startX = (imgWidth - imgHeight) / 2 + imgHeight - event.offsetY;
+      this.startY = event.offsetX - (imgWidth - imgHeight) / 2;
+    } else if (rotateNum % 180 === 0 && rotateNum % 360 !== 0) {
+      this.startX = imgWidth - event.offsetX;
+      this.startY = imgHeight - event.offsetY;
+    } else if (rotateNum % 270 === 0 && rotateNum % 360 !== 0) {
+      this.startX = (imgWidth - imgHeight) / 2 + event.offsetY;
+      this.startY = imgWidth - event.offsetX - (imgWidth - imgHeight) / 2;
+    } else {
+      this.startX = event.offsetX;
+      this.startY = event.offsetY;
+    }
+
+    this.mousemoveSub = fromEvent(document, 'mousemove').subscribe(this.mousemove.bind(this));
+    // this.mouseupSub = fromEvent(document, 'mousemove').subscribe(this.mouseup.bind(this));
+    // this.subscription.fromEvent('document', 'mouseup').subscribe(this.mouseup.bind(this));
+    // document.addEventListener('mousemove', this.mousemove);
+    // document.addEventListener('mouseup', this.mouseup);
+
+  }
+
+  // 拖拽
+  mousemove(event: any): void {
+    this.y = event.clientY - this.startY - 10;
+    this.x = event.clientX - this.startX - 10;
+    this.imgViewContent.nativeElement.style.marginTop = '' + this.y + 'px';
+    this.imgViewContent.nativeElement.style.marginLeft = '' + this.x + 'px';
+    this.imgViewContent.nativeElement.style.transition = 'margin 0s';
+  }
+  // 鼠标放开
+  mouseup(): void {
+    this.mousemoveSub.unsubscribe();
+    this.mouseupSub.unsubscribe();
+    // document.removeEventListener('mousemove', this.mousemove);
+    // document.removeEventListener('mouseup', this.mouseup);
+    this.imgViewContent.nativeElement.style.transition = 'all 0.6s';
+  }
+  // mouseMove(event: any): void {
+  //   // const imgWidth = this.imgWidth;
+  //   // const imgHeight = this.imgHeight;
+  //   // const rotateNum = this.num * 90;
+  //   // // 根据旋转的角度不同，坐标也不一样
+  //   // if (rotateNum % 90 == 0 && rotateNum % 180 != 0 && rotateNum % 270 != 0 && rotateNum % 360 != 0) {
+  //   //   this.startX = (imgWidth - imgHeight) / 2 + imgHeight - event.offsetY;
+  //   //   this.startY = event.offsetX - (imgWidth - imgHeight) / 2;
+  //   // } else if (rotateNum % 180 == 0 && rotateNum % 360 != 0) {
+  //   //   this.startX = imgWidth - event.offsetX;
+  //   //   this.startY = imgHeight - event.offsetY;
+  //   // } else if (rotateNum % 270 == 0 && rotateNum % 360 != 0) {
+  //   //   this.startX = (imgWidth - imgHeight) / 2 + event.offsetY;
+  //   //   this.startY = imgWidth - event.offsetX - (imgWidth - imgHeight) / 2;
+  //   // } else {
+  //   //   this.startX = event.offsetX;
+  //   //   this.startY = event.offsetY;
+  //   // }
+  //   // document.addEventListener('mousemove', mousemove);
+  //   // document.addEventListener('mouseup', mouseup);
+  //   // // 拖拽
+  //   // function mousemove(event) {
+  //   // console.log(event);
+  //   // console.log(11110);
+  //   // tslint:disable-next-line: no-shadowed-variable
+  //   event.preventDefault();
+
+  //   this.y = event.offsetY - this.startY - 10;
+  //   this.x = event.offsetX - this.startX - 10;
+  //   console.log('drag', event.offsetX, event.offsetY);
+  //   this.imgViewContent.nativeElement.style.marginTop = '' + this.y + 'px';
+  //   this.imgViewContent.nativeElement.style.marginLeft = '' + this.x + 'px';
+  //   // this.imgViewContent.nativeElement.style.transition = 'margin 0s';
+
+  //   // // 鼠标放开
+  //   // function mouseup() {
+  //   //   document.removeEventListener('mousemove', mousemove);
+  //   //   document.removeEventListener('mouseup', mouseup);
+  //   //   this.imgViewContent.style.transition = 'all 0.6s';
+  //   // }
+  // }
+
+  // mouseDown(event: any): void {
+  //   const imgWidth = this.imgWidth;
+  //   const imgHeight = this.imgHeight;
+  //   const rotateNum = this.num * 90;
+
+  //   // 根据旋转的角度不同，坐标也不一样
+  //   if (rotateNum % 90 === 0 && rotateNum % 180 !== 0 && rotateNum % 270 !== 0 && rotateNum % 360 !== 0) {
+  //     this.startX = (imgWidth - imgHeight) / 2 + imgHeight - event.offsetY;
+  //     this.startY = event.offsetX - (imgWidth - imgHeight) / 2;
+  //   } else if (rotateNum % 180 === 0 && rotateNum % 360 !== 0) {
+  //     this.startX = imgWidth - event.offsetX;
+  //     this.startY = imgHeight - event.offsetY;
+  //   } else if (rotateNum % 270 === 0 && rotateNum % 360 !== 0) {
+  //     this.startX = (imgWidth - imgHeight) / 2 + event.offsetY;
+  //     this.startY = imgWidth - event.offsetX - (imgWidth - imgHeight) / 2;
+  //   } else {
+  //     this.startX = event.offsetX;
+  //     this.startY = event.offsetY;
+  //   }
+  //   console.log('start', event.offsetX, event.offsetY);
+
+  //   // this.drag(event);
+  // }
+  // mouseUp(): void {
+  //   this.imgViewContent.nativeElement.style.transition = 'all 0.6s';
+  // }
+  onClick(e: MouseEvent): void {
+    console.log(e);
   }
 }
