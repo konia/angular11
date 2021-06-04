@@ -1,8 +1,8 @@
-<div id="imgViewDiv" class="img-view-dialog" #imgViewDiv>
-  <div id="imgViewContent" class="img-view-content" draggable="true" (mousedown)="mousedown($event)" #imgViewContent [ngStyle]="transform: rotate(rotateValue)">
-    <img id="dialogImg" class="dialog-img" [src]="initialImage" #dialogImg />
-  </div>
+<div class="imgViewContent" #imgViewContent>
+  <canvas #canvas (mousedown)="onMouseDown($event)" (mouseout)="onMouseOut()" (mouseup)="onMouseUp()" (mousemove)="onMouseMove($event)"></canvas>
 </div>
-<button>放大</button>
-<button (click)="onZoomIn()">缩小</button>
+<button (click)="onZoomIn()">放大</button>
+<button (click)="onZoomOut()">缩小</button>
 <button (click)="onRotate()">旋转</button>
+<button (click)="onLighten()">变亮</button>
+<button (click)="onDarken()">变暗</button>

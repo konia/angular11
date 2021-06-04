@@ -1,6 +1,10 @@
-import { Component, ElementRef, OnInit, SimpleChanges, ViewChild, OnChanges, AfterViewInit, OnDestroy, Input, Renderer2, HostListener } from '@angular/core';
+import { Component, ElementRef, OnInit, SimpleChanges, ViewChild, OnChanges, AfterViewInit, OnDestroy, Input, Renderer2 } from '@angular/core';
 import { Subscription, fromEvent } from 'rxjs';
 
+interface WindowToCanvas {
+  x: number;
+  y: number;
+}
 @Component({
   // tslint:disable-next-line: component-selector
   selector: 'image-editor',
@@ -8,33 +12,48 @@ import { Subscription, fromEvent } from 'rxjs';
   styleUrls: ['./image-editor.component.scss']
 })
 export class ImageEditorComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
-  constructor(private renderer: Renderer2) { }
+  constructor() {
 
-  winWidth = 0;
-  winHeight = 0;
-  startX = 0;
-  startY = 0;
-  x = 0;
-  y = 0;
-  index = 1;
+  }
 
+  isMove = false;
+
+  imgStatus = {
+    scale: 1.0,
+    rotate: 0
+  };
+  lastStatus = {
+    imgX: 0,
+    imgY: 0,
+    mouseX: 0,
+    mouseY: 0,
+    translateX: 0,
+    translateY: 0,
+    scale: 1.0,
+    rotate: 0
+  };
+  currentStatus = {};
+  imgData: any;
+  image = new Image();
   imgWidth = 0;
   imgHeight = 0;
-  imgMarginLeft = 0;
-  imgMarginTop = 0;
 
-  rotateNum = 0;
-  rotateValue = '';
-  scaleNum = 1;
-  scaleValue = '';
   @Input() initialImage = '';
 
-  mousemoveSub!: Subscription;
-  mouseupSub!: Subscription;
+  ctx: any;
+  canvas: any;
 
   @ViewChild('imgViewContent') imgViewContent!: ElementRef;
-  @ViewChild('imgViewDiv') imgViewDiv!: ElementRef;
-  @ViewChild('dialogImg') dialogImg!: ElementRef;
+  @ViewChild('canvas') canvasContainer!: ElementRef;
+  // @ViewChild('dialogImg') dialogImg!: ElementRef;
+
+  config = {
+    width: 0, // 设置canvas的宽
+    height: 0, // 设置canvas的高
+    maxScale: 4.0, // 最大放大倍数
+    minScale: 0.1, // 最小放大倍数
+    step: 0.1 // 每次放大、缩小 倍数的变化值
+  };
 
   ngOnInit(): void {
 
@@ -48,168 +67,157 @@ export class ImageEditorComponent implements OnInit, OnChanges, AfterViewInit, O
     throw new Error('Method not implemented.');
   }
   ngAfterViewInit(): void {
+    this.config.width = this.imgViewContent.nativeElement.clientWidth;
+    this.config.height = this.imgViewContent.nativeElement.clientHeight;
     this.init();
   }
 
   init(): void {
+    this.canvas = this.canvasContainer.nativeElement;
+    this.canvas.width = this.config.width;
+    this.canvas.height = this.config.height;
+    this.ctx = this.canvas.getContext('2d');
+    this.image.src = this.initialImage;
+    console.log(this.image.width);
 
-    const image = new Image();
-    image.src = this.initialImage;
-    let { width, height } = image;
-    const { clientWidth, clientHeight } = this.imgViewDiv.nativeElement;
+    const { width, height } = this.image;
+    const { width: clientWidth, height: clientHeight } = this.config;
 
-    console.log(clientWidth, clientHeight);
-
-    if (width < (clientWidth * 0.8) && height < (clientHeight * 0.8)) {
-      width = width;
-      height = height;
+    if (width < clientWidth && height < clientHeight) {
+      this.imgWidth = width;
+      this.imgHeight = height;
     } else {
-      const scaleX = width / (clientWidth * 0.8);
-      const scaleY = height / (clientHeight * 0.8);
+      const scaleX = width / clientWidth;
+      const scaleY = height / clientHeight;
       if (scaleX > scaleY) {
-        width = Math.floor(clientWidth * 0.8);
-        height = Math.floor(height / scaleX);
+        this.imgWidth = Math.floor(clientWidth);
+        this.imgHeight = Math.floor(height / scaleX);
       } else {
-        width = Math.floor(width / scaleY);
-        height = Math.floor(clientHeight * 0.8);
+        this.imgWidth = Math.floor(width / scaleY);
+        this.imgHeight = Math.floor(clientHeight);
       }
     }
 
-    const left = (clientWidth - width) / 2;
-    const top = (clientHeight - height) / 2;
+    this.image.onload = () => {
+      this.lastStatus = {
+        imgX: (-1 * this.imgWidth) / 2,
+        imgY: (-1 * this.imgHeight) / 2,
+        mouseX: 0,
+        mouseY: 0,
+        translateX: this.canvas.width / 2,
+        translateY: this.canvas.height / 2,
+        scale: 1.0,
+        rotate: 0
 
-    this.imgMarginLeft = left;
-    this.imgMarginTop = top;
-    this.imgWidth = width;
-    this.imgHeight = height;
-
-    this.imgViewContent.nativeElement.style.cssText = 'margin-top:' + top + 'px; margin-left:' + left + 'px';
-    this.dialogImg.nativeElement.style.cssText = 'width:' + width + 'px; height:' + height + 'px;';
+      };
+      this.drawImgByStatus(this.canvas.width / 2, this.canvas.height / 2);
+    };
   }
 
-  onRotate(): void {
-    this.rotateNum++;
-    this.rotateValue = this.rotateNum * 90 + 'deg';
+  drawImgByStatus(x: number, y: number): void {
+    const imgX = this.lastStatus.imgX - (x - this.lastStatus.translateX) / this.lastStatus.scale;
+    const imgY = this.lastStatus.imgY - (y - this.lastStatus.translateY) / this.lastStatus.scale;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.save();
+    this.ctx.translate(x, y);
+    this.ctx.rotate((this.imgStatus.rotate * Math.PI) / 180);
+    this.ctx.scale(this.imgStatus.scale, this.imgStatus.scale);
+    this.ctx.drawImage(this.image, imgX, imgY, this.imgWidth, this.imgHeight);
+    this.ctx.restore();
+
+    this.lastStatus.imgX = imgX;
+    this.lastStatus.imgY = imgY;
+    this.lastStatus.translateX = x;
+    this.lastStatus.translateY = y;
+    this.lastStatus.scale = this.imgStatus.scale;
+    this.lastStatus.rotate = this.imgStatus.rotate;
+    console.log(this.lastStatus);
+  }
+
+  drawImgByMove(x: number, y: number): void {
+    this.lastStatus.translateX = this.lastStatus.translateX + (x - this.lastStatus.mouseX);
+    this.lastStatus.translateY = this.lastStatus.translateY + (y - this.lastStatus.mouseY);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.save();
+    this.ctx.translate(this.lastStatus.translateX, this.lastStatus.translateY);
+    this.ctx.rotate((this.imgStatus.rotate * Math.PI) / 180);
+    this.ctx.scale(this.imgStatus.scale, this.imgStatus.scale);
+    this.ctx.drawImage(this.image, this.lastStatus.imgX, this.lastStatus.imgY, this.imgWidth, this.imgHeight);
+    this.ctx.restore();
+
+    this.lastStatus.mouseX = x;
+    this.lastStatus.mouseY = y;
   }
 
   onZoomIn(): void {
-    this.scaleNum++;
-    // this.scaleValue = this.scaleNum * 0.2 + 1;
+    this.imgStatus.scale = this.imgStatus.scale >= this.config.maxScale ? this.config.maxScale : this.imgStatus.scale + this.config.step;
+    this.drawImgByStatus(this.canvas.width / 2, this.canvas.height / 2);
   }
 
-  mousedown(event: any): void {
-    event.preventDefault();
-    const imgWidth = this.imgWidth;
-    const imgHeight = this.imgHeight;
-    const rotateNum = this.rotateNum * 90;
-    // 根据旋转的角度不同，坐标也不一样
-    if (rotateNum % 90 === 0 && rotateNum % 180 !== 0 && rotateNum % 270 !== 0 && rotateNum % 360 !== 0) {
-      this.startX = (imgWidth - imgHeight) / 2 + imgHeight - event.offsetY;
-      this.startY = event.offsetX - (imgWidth - imgHeight) / 2;
-    } else if (rotateNum % 180 === 0 && rotateNum % 360 !== 0) {
-      this.startX = imgWidth - event.offsetX;
-      this.startY = imgHeight - event.offsetY;
-    } else if (rotateNum % 270 === 0 && rotateNum % 360 !== 0) {
-      this.startX = (imgWidth - imgHeight) / 2 + event.offsetY;
-      this.startY = imgWidth - event.offsetX - (imgWidth - imgHeight) / 2;
-    } else {
-      this.startX = event.offsetX;
-      this.startY = event.offsetY;
+  onZoomOut(): void {
+    this.imgStatus.scale = this.imgStatus.scale <= this.config.minScale ? this.config.minScale : this.imgStatus.scale - this.config.step;
+    this.drawImgByStatus(this.canvas.width / 2, this.canvas.height / 2);
+  }
+
+  onRotate(): void {
+    const rotate = Math.floor(this.imgStatus.rotate / 90) * 90 - 90;
+    this.imgStatus.rotate = rotate;
+    this.drawImgByStatus(this.canvas.width / 2, this.canvas.height / 2);
+  }
+
+  onMouseDown(e: any): void {
+    this.isMove = true;
+    this.canvas.style.cursor = 'move';
+
+    const { x, y } = this.windowToCanvas(e.clientX, e.clientY);
+    this.lastStatus.mouseX = x;
+    this.lastStatus.mouseY = y;
+  }
+
+  onMouseOut(): void {
+    this.isMove = false;
+    this.canvas.style.cursor = 'default';
+  }
+
+  onMouseUp(): void {
+    this.isMove = false;
+    this.canvas.style.cursor = 'default';
+  }
+
+  onMouseMove(e: any): void {
+    if (this.isMove) {
+      const { x, y } = this.windowToCanvas(e.clientX, e.clientY);
+      this.drawImgByMove(x, y);
     }
-
-    this.mousemoveSub = fromEvent(document, 'mousemove').subscribe(this.mousemove.bind(this));
-    // this.mouseupSub = fromEvent(document, 'mousemove').subscribe(this.mouseup.bind(this));
-    // this.subscription.fromEvent('document', 'mouseup').subscribe(this.mouseup.bind(this));
-    // document.addEventListener('mousemove', this.mousemove);
-    // document.addEventListener('mouseup', this.mouseup);
-
   }
 
-  // 拖拽
-  mousemove(event: any): void {
-    this.y = event.clientY - this.startY - 10;
-    this.x = event.clientX - this.startX - 10;
-    this.imgViewContent.nativeElement.style.marginTop = '' + this.y + 'px';
-    this.imgViewContent.nativeElement.style.marginLeft = '' + this.x + 'px';
-    this.imgViewContent.nativeElement.style.transition = 'margin 0s';
+  onLighten(): void {
+    this.imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    for (let i = 0;i < this.imgData.data.length;i += 4) {
+      const x = 20;
+      this.imgData.data[i + 0] += x;
+      this.imgData.data[i + 1] += x;
+      this.imgData.data[i + 2] += x;
+    }
+    this.ctx.putImageData(this.imgData, 0, 0);
   }
-  // 鼠标放开
-  mouseup(): void {
-    this.mousemoveSub.unsubscribe();
-    this.mouseupSub.unsubscribe();
-    // document.removeEventListener('mousemove', this.mousemove);
-    // document.removeEventListener('mouseup', this.mouseup);
-    this.imgViewContent.nativeElement.style.transition = 'all 0.6s';
+  onDarken(): void {
+    this.imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    for (let i = 0;i < this.imgData.data.length;i += 4) {
+      const x = 20;
+      this.imgData.data[i + 0] -= x;
+      this.imgData.data[i + 1] -= x;
+      this.imgData.data[i + 2] -= x;
+    }
+    this.ctx.putImageData(this.imgData, 0, 0);
   }
-  // mouseMove(event: any): void {
-  //   // const imgWidth = this.imgWidth;
-  //   // const imgHeight = this.imgHeight;
-  //   // const rotateNum = this.num * 90;
-  //   // // 根据旋转的角度不同，坐标也不一样
-  //   // if (rotateNum % 90 == 0 && rotateNum % 180 != 0 && rotateNum % 270 != 0 && rotateNum % 360 != 0) {
-  //   //   this.startX = (imgWidth - imgHeight) / 2 + imgHeight - event.offsetY;
-  //   //   this.startY = event.offsetX - (imgWidth - imgHeight) / 2;
-  //   // } else if (rotateNum % 180 == 0 && rotateNum % 360 != 0) {
-  //   //   this.startX = imgWidth - event.offsetX;
-  //   //   this.startY = imgHeight - event.offsetY;
-  //   // } else if (rotateNum % 270 == 0 && rotateNum % 360 != 0) {
-  //   //   this.startX = (imgWidth - imgHeight) / 2 + event.offsetY;
-  //   //   this.startY = imgWidth - event.offsetX - (imgWidth - imgHeight) / 2;
-  //   // } else {
-  //   //   this.startX = event.offsetX;
-  //   //   this.startY = event.offsetY;
-  //   // }
-  //   // document.addEventListener('mousemove', mousemove);
-  //   // document.addEventListener('mouseup', mouseup);
-  //   // // 拖拽
-  //   // function mousemove(event) {
-  //   // console.log(event);
-  //   // console.log(11110);
-  //   // tslint:disable-next-line: no-shadowed-variable
-  //   event.preventDefault();
 
-  //   this.y = event.offsetY - this.startY - 10;
-  //   this.x = event.offsetX - this.startX - 10;
-  //   console.log('drag', event.offsetX, event.offsetY);
-  //   this.imgViewContent.nativeElement.style.marginTop = '' + this.y + 'px';
-  //   this.imgViewContent.nativeElement.style.marginLeft = '' + this.x + 'px';
-  //   // this.imgViewContent.nativeElement.style.transition = 'margin 0s';
-
-  //   // // 鼠标放开
-  //   // function mouseup() {
-  //   //   document.removeEventListener('mousemove', mousemove);
-  //   //   document.removeEventListener('mouseup', mouseup);
-  //   //   this.imgViewContent.style.transition = 'all 0.6s';
-  //   // }
-  // }
-
-  // mouseDown(event: any): void {
-  //   const imgWidth = this.imgWidth;
-  //   const imgHeight = this.imgHeight;
-  //   const rotateNum = this.num * 90;
-
-  //   // 根据旋转的角度不同，坐标也不一样
-  //   if (rotateNum % 90 === 0 && rotateNum % 180 !== 0 && rotateNum % 270 !== 0 && rotateNum % 360 !== 0) {
-  //     this.startX = (imgWidth - imgHeight) / 2 + imgHeight - event.offsetY;
-  //     this.startY = event.offsetX - (imgWidth - imgHeight) / 2;
-  //   } else if (rotateNum % 180 === 0 && rotateNum % 360 !== 0) {
-  //     this.startX = imgWidth - event.offsetX;
-  //     this.startY = imgHeight - event.offsetY;
-  //   } else if (rotateNum % 270 === 0 && rotateNum % 360 !== 0) {
-  //     this.startX = (imgWidth - imgHeight) / 2 + event.offsetY;
-  //     this.startY = imgWidth - event.offsetX - (imgWidth - imgHeight) / 2;
-  //   } else {
-  //     this.startX = event.offsetX;
-  //     this.startY = event.offsetY;
-  //   }
-  //   console.log('start', event.offsetX, event.offsetY);
-
-  //   // this.drag(event);
-  // }
-  // mouseUp(): void {
-  //   this.imgViewContent.nativeElement.style.transition = 'all 0.6s';
-  // }
-  onClick(e: MouseEvent): void {
-    console.log(e);
+  // 计算相对于canvas左上角的坐标值
+  windowToCanvas(x: number, y: number): WindowToCanvas {
+    const box = this.canvas.getBoundingClientRect();
+    return {
+      x: x - box.left,
+      y: y - box.top
+    };
   }
 }
