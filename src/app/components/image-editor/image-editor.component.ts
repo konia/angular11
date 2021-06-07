@@ -193,7 +193,7 @@ export class ImageEditorComponent implements OnInit, OnChanges, AfterViewInit, O
 
   onLighten(): void {
     this.imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-    for (let i = 0;i < this.imgData.data.length;i += 4) {
+    for (let i = 0; i < this.imgData.data.length; i += 4) {
       const x = 20;
       this.imgData.data[i + 0] += x;
       this.imgData.data[i + 1] += x;
@@ -203,7 +203,7 @@ export class ImageEditorComponent implements OnInit, OnChanges, AfterViewInit, O
   }
   onDarken(): void {
     this.imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-    for (let i = 0;i < this.imgData.data.length;i += 4) {
+    for (let i = 0; i < this.imgData.data.length; i += 4) {
       const x = 20;
       this.imgData.data[i + 0] -= x;
       this.imgData.data[i + 1] -= x;

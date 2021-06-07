@@ -6,6 +6,7 @@ import { HomeComponent } from './home.component';
 import { ProdComponent } from './prod/prod.component';
 import { AgoPipe } from 'src/app/pipe/ago.pipe';
 import { ImageEditorModule } from 'src/app/components/image-editor/image-editor.module';
+import { ImageModule } from 'src/app/components/image/image.module';
 
 @NgModule({
   declarations: [
@@ -16,7 +17,8 @@ import { ImageEditorModule } from 'src/app/components/image-editor/image-editor.
   imports: [
     HomeRoutingModule,
     SharedModule,
-    ImageEditorModule
+    ImageEditorModule,
+    ImageModule
   ],
 })
 export class HomeModule { }

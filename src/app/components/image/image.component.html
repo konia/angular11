@@ -1,0 +1,8 @@
+<div class="imgViewContent" #imgViewContent style="overflow: hidden">
+  <canvas #canvas (mousedown)="onMouseDown($event)" (mouseout)="onMouseOut()" (mouseup)="onMouseUp()" (mousemove)="onMouseMove($event)"></canvas>
+</div>
+<button (click)="onZoomIn()">放大</button>
+<button (click)="onZoomOut()">缩小</button>
+<button (click)="onRotate()">旋转</button>
+<button (click)="onLighten()">变亮</button>
+<button (click)="onDarken()">变暗</button>
