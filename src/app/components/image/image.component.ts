@@ -82,8 +82,11 @@ export class ImageComponent implements OnInit, AfterViewInit {
     this.cssStyle.translate = 'translate(' + this.lastStatus.translateX + 'px, ' + this.lastStatus.translateY + 'px)';
     this.lastStatus.mouseX = x;
     this.lastStatus.mouseY = y;
-    console.log(this.cssStyle.translate);
-    this.canvas.style.cssText = `transform: ${this.cssStyle.translate} ${this.cssStyle.scale} ${this.cssStyle.rotate}`;
+    setTimeout(() => {
+      this.canvas.style.cssText = `transform: ${this.cssStyle.translate} ${this.cssStyle.scale} ${this.cssStyle.rotate}`;
+    }, 0);
+    // console.log(this.cssStyle.translate);
+    // this.canvas.style.cssText = `transform: ${this.cssStyle.translate} ${this.cssStyle.scale} ${this.cssStyle.rotate}`;
 
     // console.log(this.lastStatus);
 
@@ -112,9 +115,11 @@ export class ImageComponent implements OnInit, AfterViewInit {
     this.isMove = true;
     // this.canvas.style.cursor = 'move';
 
-    const { x, y } = this.windowToCanvas(e.clientX, e.clientY);
-    this.lastStatus.mouseX = x;
-    this.lastStatus.mouseY = y;
+    // const { x, y } = this.windowToCanvas(e.clientX, e.clientY);
+
+    this.lastStatus.mouseX = e.clientX;
+    this.lastStatus.mouseY = e.clientY;
+    console.log(e.clientX, e.clientY);
   }
 
   onMouseOut(): void {
@@ -130,7 +135,8 @@ export class ImageComponent implements OnInit, AfterViewInit {
   onMouseMove(e: any): void {
     if (this.isMove) {
       const { x, y } = this.windowToCanvas(e.clientX, e.clientY);
-      this.drawImgByMove(x, y);
+      // console.log(x, y);
+      this.drawImgByMove(e.clientX, e.clientY);
     }
   }
 
@@ -151,6 +157,7 @@ export class ImageComponent implements OnInit, AfterViewInit {
   // 计算相对于canvas左上角的坐标值
   windowToCanvas(x: number, y: number): WindowToCanvas {
     const box = this.canvas.getBoundingClientRect();
+    console.log(box.left, box.top);
     return {
       x: x - box.left,
       y: y - box.top
