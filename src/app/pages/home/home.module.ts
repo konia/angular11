@@ -1,3 +1,4 @@
+import { MosaicModule } from './../../components/mosaic/mosaic.module';
 import { SharedModule } from './../../shared/shared.module';
 import { NgModule } from '@angular/core';
 
@@ -18,7 +19,8 @@ import { ImageModule } from 'src/app/components/image/image.module';
     HomeRoutingModule,
     SharedModule,
     ImageEditorModule,
-    ImageModule
+    ImageModule,
+    MosaicModule
   ],
 })
 export class HomeModule { }
